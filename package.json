@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.0",
+    "@ai-sdk/openai": "^4.0.0",
+    "@ai-sdk/react": "^4.0.0",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tiptap/extension-collaboration": "^3.27.1",
@@ -20,6 +23,7 @@
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
     "@tiptap/y-tiptap": "^3.0.5",
+    "ai": "^7.0.0",
     "dexie": "^4.4.4",
     "lib0": "^0.2.117",
     "lucide-react": "^1.21.0",
