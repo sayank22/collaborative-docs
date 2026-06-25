@@ -1,4 +1,17 @@
-import { ArrowLeft, Loader2, WifiOff, Cloud, Share2, Settings, Bookmark, History } from 'lucide-react';
+'use client';
+
+import { 
+  ArrowLeft, 
+  Loader2, 
+  WifiOff, 
+  Cloud, 
+  Share2, 
+  Settings, 
+  Bookmark, 
+  History,
+  Eye,
+  FileText
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface EditorHeaderProps {
@@ -13,56 +26,136 @@ interface EditorHeaderProps {
   onToggleSidebar: () => void;
 }
 
-export function EditorHeader({ userRole, syncState, documentTitle, setDocumentTitle, handleTitleBlur, onOpenShare, onOpenManage, onCreateSnapshot, onToggleSidebar }: EditorHeaderProps) {
+export function EditorHeader({ 
+  userRole, 
+  syncState, 
+  documentTitle, 
+  setDocumentTitle, 
+  handleTitleBlur, 
+  onOpenShare, 
+  onOpenManage, 
+  onCreateSnapshot, 
+  onToggleSidebar 
+}: EditorHeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
-      <div className="flex items-center gap-2 flex-1">
-        <button onClick={() => router.push('/')} className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-md transition" title="Back to Dashboard">
-          <ArrowLeft className="w-5 h-5" />
+    <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md sm:px-6">
+      
+      {/* LEFT SECTION: Navigation & Title */}
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
+        <button 
+          onClick={() => router.push('/')} 
+          className="group flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200" 
+          title="Back to Dashboard"
+        >
+          <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
         </button>
         
-        {/* NEW: Editable Title Input */}
-        <input 
-          type="text"
-          value={documentTitle}
-          onChange={(e) => setDocumentTitle(e.target.value)}
-          onBlur={handleTitleBlur}
-          readOnly={userRole === 'viewer'}
-          className={`text-xl font-bold text-gray-800 bg-transparent border-transparent focus:border-gray-300 hover:border-gray-200 border rounded-md px-2 py-1 w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-blue-100 transition ${userRole === 'viewer' ? 'cursor-default focus:ring-0 hover:border-transparent' : 'cursor-text'}`}
-          placeholder="Document Title"
-        />
-
-        {userRole === 'viewer' && <span className="bg-red-50 text-red-600 text-xs px-2 py-1 rounded-full font-bold border border-red-200 ml-2">VIEW ONLY</span>}
-      </div>
-      
-      <div className="flex items-center gap-4">
-        <div className="text-sm text-gray-500 hidden md:flex items-center">
-          {syncState === 'loading' && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
-          {syncState === 'offline-saved' && <span className="flex items-center gap-1 text-gray-600 bg-gray-100 px-3 py-1 rounded-full"><WifiOff className="w-4 h-4" /> Offline</span>}
-          {syncState === 'online' && <span className="flex items-center gap-1 text-green-600 bg-green-50 px-3 py-1 rounded-full"><Cloud className="w-4 h-4" /> Synced</span>}
+        {/* Document Icon (Visual Anchor) */}
+        <div className="hidden h-9 w-9 items-center justify-center rounded-lg bg-blue-50 sm:flex">
+          <FileText className="h-5 w-5 text-blue-600" />
         </div>
 
-        {(userRole === 'owner' || userRole === 'editor') && (
-          <>
-            <div className="flex rounded-md shadow-sm">
-              <button onClick={onOpenShare} className="flex items-center gap-1 text-sm bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-l-md font-medium transition border-r border-blue-700">
-                <Share2 className="w-4 h-4" /> Share
-              </button>
-              <button onClick={onOpenManage} className="flex items-center gap-1 text-sm bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-r-md transition" title="Manage Access">
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-            <button onClick={onCreateSnapshot} className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-medium transition hidden sm:flex">
-              <Bookmark className="w-4 h-4" /> Save
-            </button>
-          </>
-        )}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <input 
+            type="text"
+            value={documentTitle}
+            onChange={(e) => setDocumentTitle(e.target.value)}
+            onBlur={handleTitleBlur}
+            readOnly={userRole === 'viewer'}
+            placeholder="Untitled Document"
+            className={`w-full max-w-[160px] truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 transition-all sm:max-w-[300px] md:max-w-[400px] ${
+              userRole === 'viewer' 
+                ? 'cursor-default focus:outline-none' 
+                : 'cursor-text hover:border-slate-300 hover:bg-slate-50 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10'
+            }`}
+          />
 
-        <button onClick={onToggleSidebar} className="flex items-center gap-1 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-md font-medium transition">
-          <History className="w-4 h-4" /> <span className="hidden sm:inline">History</span>
-        </button>
+          {userRole === 'viewer' && (
+            <span className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-600/20">
+              <Eye className="h-3 w-3" />
+              <span className="hidden sm:inline">View Only</span>
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {/* RIGHT SECTION: Status & Actions */}
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        
+        {/* Sync Status Indicator */}
+        <div className="hidden items-center gap-1.5 pr-2 sm:flex px-3 py-2">
+          {syncState === 'loading' && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 px-2 py-1 rounded-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              Saving...
+            </div>
+          )}
+          {syncState === 'offline-saved' && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 px-2 py-1 rounded-lg">
+              <WifiOff className="h-4 w-4 text-slate-400" />
+              Saved locally
+            </div>
+          )}
+          {syncState === 'online' && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-emerald-100 px-2 py-1 rounded-lg">
+              <Cloud className="h-4 w-4 text-emerald-600" />
+              Saved to cloud
+            </div>
+          )}
+        </div>
+
+        {/* Separator */}
+        <div className="hidden h-6 w-px bg-slate-200 sm:block" />
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {(userRole === 'owner' || userRole === 'editor') && (
+            <>
+              {/* Snapshot Button */}
+              <button 
+                onClick={onCreateSnapshot} 
+                title="Save Version Snapshot"
+                className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              >
+                <Bookmark className="h-4 w-4" />
+                <span className="hidden lg:inline">Save Version</span>
+              </button>
+
+              {/* Share Group */}
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={onOpenShare} 
+                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Share</span>
+                </button>
+                
+                {userRole === 'owner' && (
+                  <button 
+                    onClick={onOpenManage} 
+                    title="Manage Access"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* History Toggle Button */}
+          <button 
+            onClick={onToggleSidebar} 
+            title="View History"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden lg:inline">History</span>
+          </button>
+        </div>
       </div>
     </header>
   );

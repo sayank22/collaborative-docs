@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Collaboration from '@tiptap/extension-collaboration';
-import * as Y from 'yjs'; // <-- Added back
-import { Loader2, X, History, RotateCcw } from 'lucide-react';
+import Collaboration from '@tiptap/extension-collaboration'; // Fixed Import
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import TextAlign from '@tiptap/extension-text-align';
+import * as Y from 'yjs';
+import { 
+  Loader2, X, History, RotateCcw, 
+  Bold, Italic, Underline as UnderlineIcon, Strikethrough,
+  Heading1, Heading2, List, ListOrdered, 
+  AlignLeft, AlignCenter, AlignRight, Palette
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useDocumentSync } from '@/src/hooks/useDocumentSync';
@@ -15,56 +24,193 @@ import { EditorHeader } from '@/src/components/editor/EditorHeader';
 import { ShareModal } from '@/src/components/editor/ShareModal';
 import { ManageAccessModal } from '@/src/components/editor/ManageAccessModal';
 
+// --- EDITOR TOOLBAR COMPONENT ---
+const MenuBar = ({ editor, userRole }: { editor: any, userRole: string }) => {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!editor) return;
+    const forceUpdate = () => setTick((tick) => tick + 1);
+
+    editor.on('transaction', forceUpdate);
+    editor.on('selectionUpdate', forceUpdate);
+
+    return () => {
+      editor.off('transaction', forceUpdate);
+      editor.off('selectionUpdate', forceUpdate);
+    };
+  }, [editor]);
+
+  if (!editor || userRole === 'viewer') return null;
+
+  return (
+    <div className="sticky top-16 z-40 flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
+      
+      {/* Basic Formatting */}
+      <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+        <button onClick={() => editor.chain().focus().toggleBold().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('bold') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Bold">
+          <Bold className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('italic') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Italic">
+          <Italic className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('underline') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Underline">
+          <UnderlineIcon className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().toggleStrike().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('strike') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Strikethrough">
+          <Strikethrough className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Headings */}
+      <div className="flex items-center gap-1 border-r border-slate-200 px-2">
+        <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Heading 1">
+          <Heading1 className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Heading 2">
+          <Heading2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Alignment */}
+      <div className="flex items-center gap-1 border-r border-slate-200 px-2">
+        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive({ textAlign: 'left' }) ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Align Left">
+          <AlignLeft className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive({ textAlign: 'center' }) ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Align Center">
+          <AlignCenter className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive({ textAlign: 'right' }) ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Align Right">
+          <AlignRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Lists */}
+      <div className="flex items-center gap-1 border-r border-slate-200 px-2">
+        <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('bulletList') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Bullet List">
+          <List className="h-4 w-4" />
+        </button>
+        <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`rounded p-1.5 transition-colors hover:bg-slate-100 ${editor.isActive('orderedList') ? 'bg-slate-200 text-slate-900 shadow-sm' : 'text-slate-600'}`} title="Numbered List">
+          <ListOrdered className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Color Picker */}
+      <div className="flex items-center px-2">
+        <div className="group relative flex items-center gap-1 rounded p-1.5 transition-colors hover:bg-slate-100">
+          <Palette className="h-4 w-4 text-slate-600" />
+          <input 
+            type="color" 
+            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            value={editor.getAttributes('textStyle').color || '#000000'}
+            className="h-5 w-5 cursor-pointer appearance-none rounded border-none bg-transparent p-0 outline-none"
+            title="Text Color"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN PAGE COMPONENT ---
 export default function EditorPage() {
   const params = useParams();
   const documentId = params.id as string;
 
-  // 1. Initialize Y.Doc at the top level so everyone can share it
   const [ydoc] = useState(() => new Y.Doc());
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const { isSidebarOpen, toggleSidebar, versions, addVersion } = useVersionStore();
 
-  // 2. Setup TipTap Editor
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ history: false }), 
-      Collaboration.configure({ document: ydoc })
+      Collaboration.configure({ document: ydoc }), // FIX APPLIED HERE
+      Underline,
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
-    immediatelyRender: false, // <-- FIXES the Next.js hydration warning!
-    editorProps: { attributes: { class: 'focus:outline-none min-h-[500px] text-gray-900 text-lg prose prose-blue max-w-none' } },
+    immediatelyRender: false,
+    editorProps: { 
+      attributes: { 
+        class: 'focus:outline-none min-h-[800px] w-full text-slate-900 text-base sm:text-lg prose prose-slate prose-blue max-w-none' 
+      } 
+    },
   });
 
-  // 3. Connect our Hook safely (only one call!)
   const { syncState, userRole, documentTitle, setDocumentTitle, handleTitleBlur, collaborators, fetchCollaborators, supabase } = useDocumentSync(documentId, editor, ydoc);
 
-  // 4. Document Actions
+  // Update editor editable state based on user role
+  useEffect(() => {
+    if (editor && userRole) {
+      editor.setEditable(userRole !== 'viewer');
+    }
+  }, [editor, userRole]);
+
   const handleCreateSnapshot = async () => {
     const name = prompt("Enter a name for this version snapshot:");
     if (!name) return;
     
-    const uint8ArrayToHex = (arr: Uint8Array) => '\\x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
     const promise = new Promise(async (resolve, reject) => {
       try {
-        const { data, error } = await supabase.from('document_versions').insert({ document_id: documentId, snapshot_data: uint8ArrayToHex(ydoc.encodeStateAsUpdate()), snapshot_json: editor?.getJSON(), version_name: name }).select().single();
+        const stateVector = Y.encodeStateAsUpdate(ydoc);
+        
+        const MAX_PAYLOAD_BYTES = 1048576;
+        if (stateVector.byteLength > MAX_PAYLOAD_BYTES) {
+            return reject(new Error("Payload exceeds 1MB size limit."));
+        }
+
+        const uint8ArrayToHex = (arr: Uint8Array) => '\\x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+        const hexState = uint8ArrayToHex(stateVector);
+        
+        const { data, error } = await supabase.from('document_versions').insert({ 
+            document_id: documentId, 
+            snapshot_data: hexState, 
+            snapshot_json: editor?.getJSON(), 
+            version_name: name 
+        }).select().single();
+        
         if (error) throw error;
-        addVersion(data as VersionSnapshot); resolve(data);
-      } catch (err) { reject(err); }
+        addVersion(data as VersionSnapshot); 
+        resolve(data);
+      } catch (err) { 
+        reject(err); 
+      }
     });
-    toast.promise(promise, { loading: 'Creating snapshot...', success: 'Snapshot saved successfully!', error: 'Failed to save snapshot.' });
+
+    toast.promise(promise, { 
+        loading: 'Creating snapshot...', 
+        success: 'Snapshot saved successfully!', 
+        error: (err) => err instanceof Error ? err.message : 'Failed to save snapshot.' 
+    });
   };
 
   const handleRestoreVersion = (version: VersionSnapshot) => {
     if (!version.snapshot_json) return toast.error("Missing JSON data.");
-    try { editor?.commands.setContent(version.snapshot_json); toast.success("Document restored!"); toggleSidebar(); } 
-    catch { toast.error("Failed to restore."); }
+    try { 
+      editor?.commands.setContent(version.snapshot_json); 
+      toast.success("Document restored!"); 
+      toggleSidebar(); 
+    } catch { 
+      toast.error("Failed to restore."); 
+    }
   };
 
-  if (!editor || !userRole) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (!editor || !userRole) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm font-medium text-slate-500">Loading document...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex min-h-screen bg-slate-100">
+      <div className="flex min-w-0 flex-1 flex-col">
         
         <EditorHeader 
           userRole={userRole} 
@@ -78,9 +224,15 @@ export default function EditorPage() {
           onToggleSidebar={toggleSidebar} 
         />
 
-        <main className="flex-1 max-w-4xl w-full mx-auto p-8 my-8 bg-white shadow-lg rounded-xl border overflow-y-auto">
-          <EditorContent editor={editor} />
+        <MenuBar editor={editor} userRole={userRole} />
+
+        {/* Editor "Page" Container */}
+        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:py-12">
+          <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white p-8 shadow-sm sm:p-12 lg:p-16">
+            <EditorContent editor={editor} />
+          </div>
         </main>
+
       </div>
 
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} documentId={documentId} supabase={supabase} onSuccess={fetchCollaborators} />
@@ -88,23 +240,50 @@ export default function EditorPage() {
 
       {/* History Sidebar */}
       {isSidebarOpen && (
-        <div className="w-80 bg-white border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-            <h2 className="font-bold text-gray-800 flex items-center gap-1"><History className="w-4 h-4" /> Version History</h2>
-            <button onClick={toggleSidebar} className="text-gray-500 hover:text-gray-800"><X className="w-5 h-5" /></button>
+        <div className="flex w-80 flex-col border-l border-slate-200 bg-slate-50 shadow-2xl animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <History className="h-4 w-4 text-slate-500" /> Version History
+            </h2>
+            <button 
+              onClick={toggleSidebar} 
+              className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-800"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {versions.length === 0 ? <p className="text-sm text-gray-400 text-center mt-4">No snapshots captured yet.</p> : versions.map((v) => (
-              <div key={v.id} className="p-3 border rounded-lg hover:border-blue-300 bg-white shadow-sm transition">
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-semibold text-sm text-gray-900 truncate pr-2">{v.version_name}</h3>
+          
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {versions.length === 0 ? (
+              <div className="mt-8 text-center text-sm text-slate-400">
+                <p>No snapshots captured yet.</p>
+                <p className="mt-1 text-xs">Save a version to see it here.</p>
+              </div>
+            ) : (
+              versions.map((v) => (
+                <div key={v.id} className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 line-clamp-2">{v.version_name}</h3>
+                  </div>
+                  <p className="text-xs font-medium text-slate-500">
+                    {new Date(v.created_at).toLocaleString(undefined, {
+                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                    })}
+                  </p>
+                  
                   {(userRole === 'owner' || userRole === 'editor') && (
-                    <button onClick={() => handleRestoreVersion(v)} className="text-xs flex items-center gap-0.5 text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"><RotateCcw className="w-3 h-3" /> Restore</button>
+                    <div className="mt-2 border-t border-slate-100 pt-3 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button 
+                        onClick={() => handleRestoreVersion(v)} 
+                        className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Restore this version
+                      </button>
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">{new Date(v.created_at).toLocaleString()}</p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,7 @@
-import { X, Settings, Trash2 } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { X, Settings, Trash2, Shield, Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Collaborator } from '@/src/hooks/useDocumentSync';
 
@@ -12,62 +15,177 @@ interface ManageAccessModalProps {
   onSuccess: () => void;
 }
 
-export function ManageAccessModal({ isOpen, onClose, documentId, supabase, userRole, collaborators, onSuccess }: ManageAccessModalProps) {
+export function ManageAccessModal({ 
+  isOpen, 
+  onClose, 
+  documentId, 
+  supabase, 
+  userRole, 
+  collaborators, 
+  onSuccess 
+}: ManageAccessModalProps) {
+  // Track which specific user row is currently processing a mutation
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const handleUpdateRole = async (targetUserId: string, newRole: string) => {
-    const executeUpdate = async () => {
-      const { error } = await supabase.rpc('update_collaborator_role', { doc_id: documentId, target_user_id: targetUserId, new_role: newRole });
+    setProcessingId(targetUserId);
+    try {
+      const { error } = await supabase.rpc('update_collaborator_role', { 
+        doc_id: documentId, 
+        target_user_id: targetUserId, 
+        new_role: newRole 
+      });
       if (error) throw new Error(error.message);
+      
       onSuccess();
-      return true;
-    };
-    toast.promise(executeUpdate(), { loading: 'Updating role...', success: 'Role updated!', error: (err) => err.message || 'Failed to update.' });
+      toast.success('Role updated successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update role.');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleRemoveUser = async (targetUserId: string) => {
-    if (!confirm('Are you sure you want to remove this collaborator?')) return;
-    const executeRemove = async () => {
-      const { error } = await supabase.rpc('remove_collaborator', { doc_id: documentId, target_user_id: targetUserId });
+    if (!confirm('Are you sure you want to remove this collaborator? They will lose all access to this document.')) return;
+    
+    setProcessingId(targetUserId);
+    try {
+      const { error } = await supabase.rpc('remove_collaborator', { 
+        doc_id: documentId, 
+        target_user_id: targetUserId 
+      });
       if (error) throw new Error(error.message);
+      
       onSuccess();
-      return true;
-    };
-    toast.promise(executeRemove(), { loading: 'Removing user...', success: 'User removed.', error: (err) => err.message || 'Failed to remove.' });
+      toast.success('Collaborator removed.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to remove collaborator.');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
+  const getInitial = (email: string) => email ? email.charAt(0).toUpperCase() : '?';
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
-        <div className="flex justify-between items-center mb-4 border-b pb-4">
-          <h2 className="text-lg font-bold flex items-center gap-2"><Settings className="w-5 h-5 text-gray-700"/> Manage Access</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-800"><X className="w-5 h-5"/></button>
-        </div>
-        <div className="overflow-y-auto flex-1 pr-2 space-y-3">
-          {collaborators.map((c) => (
-            <div key={c.user_id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{c.email}</p>
-                <p className="text-xs text-gray-500">Added {new Date(c.created_at).toLocaleDateString()}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                {c.role === 'owner' ? (
-                  <span className="text-sm font-bold text-gray-400 bg-gray-200 px-3 py-1 rounded-md">Owner</span>
-                ) : (
-                  <>
-                    <select value={c.role} onChange={(e) => handleUpdateRole(c.user_id, e.target.value)} disabled={userRole !== 'owner'} className={`text-sm border rounded-md px-2 py-1 ${userRole !== 'owner' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white cursor-pointer'}`}>
-                      <option value="editor">Editor</option>
-                      <option value="viewer">Viewer</option>
-                    </select>
-                    {userRole === 'owner' && (
-                      <button onClick={() => handleRemoveUser(c.user_id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition"><Trash2 className="w-4 h-4" /></button>
-                    )}
-                  </>
-                )}
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div 
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 animate-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+              <Settings className="h-4 w-4 text-slate-700" />
             </div>
-          ))}
-          {collaborators.length === 0 && <p className="text-sm text-gray-500 text-center py-4">No collaborators found.</p>}
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Manage Access</h2>
+            </div>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <p className="mb-5 text-sm text-slate-500">
+            People with access to this document. Owners can change roles or remove collaborators.
+          </p>
+
+          <div className="space-y-3">
+            {collaborators.map((c) => {
+              const isProcessing = processingId === c.user_id;
+              
+              return (
+                <div 
+                  key={c.user_id} 
+                  className={`flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-colors ${
+                    isProcessing ? 'bg-slate-50/50 opacity-70' : 'bg-white hover:border-slate-300'
+                  }`}
+                >
+                  {/* User Info (Avatar + Email) */}
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-200/50">
+                      {getInitial(c.email)}
+                    </div>
+                    <div className="truncate pr-4">
+                      <p className="truncate text-sm font-semibold text-slate-900">{c.email}</p>
+                      <p className="text-xs text-slate-500">
+                        Added {new Date(c.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions Area */}
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    {isProcessing ? (
+                      <div className="flex w-24 items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                      </div>
+                    ) : c.role === 'owner' ? (
+                      <span className="flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+                        <Shield className="h-3 w-3" /> Owner
+                      </span>
+                    ) : (
+                      <>
+                        {/* Custom Select Dropdown */}
+                        <div className="relative">
+                          <select 
+                            value={c.role} 
+                            onChange={(e) => handleUpdateRole(c.user_id, e.target.value)} 
+                            disabled={userRole !== 'owner'} 
+                            className={`block w-28 appearance-none rounded-lg border py-1.5 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                              userRole !== 'owner' 
+                                ? 'border-transparent bg-slate-50 text-slate-500 cursor-not-allowed' 
+                                : 'border-slate-300 bg-white text-slate-900 hover:border-slate-400 cursor-pointer'
+                            }`}
+                          >
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <svg className={`h-4 w-4 ${userRole !== 'owner' ? 'text-slate-300' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Remove Button */}
+                        {userRole === 'owner' && (
+                          <button 
+                            onClick={() => handleRemoveUser(c.user_id)} 
+                            title="Remove collaborator"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {collaborators.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
+                  <User className="h-6 w-6 text-slate-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-900">No collaborators found</p>
+                <p className="mt-1 text-xs text-slate-500">Share this document to add people.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
