@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { X, Settings, Trash2, Shield, Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Collaborator } from '@/src/hooks/useDocumentSync';
+import type { Database, UserRole } from '@/src/lib/supabase/types';
 
 interface ManageAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   documentId: string;
-  supabase: any;
+  supabase: SupabaseClient<Database>;
   userRole: 'owner' | 'editor' | 'viewer';
   collaborators: Collaborator[];
   onSuccess: () => void;
@@ -29,7 +31,7 @@ export function ManageAccessModal({
 
   if (!isOpen) return null;
 
-  const handleUpdateRole = async (targetUserId: string, newRole: string) => {
+  const handleUpdateRole = async (targetUserId: string, newRole: UserRole) => {
     setProcessingId(targetUserId);
     try {
       const { error } = await supabase.rpc('update_collaborator_role', { 
@@ -41,8 +43,9 @@ export function ManageAccessModal({
       
       onSuccess();
       toast.success('Role updated successfully!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update role.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || 'Failed to update role.');
     } finally {
       setProcessingId(null);
     }
@@ -61,8 +64,9 @@ export function ManageAccessModal({
       
       onSuccess();
       toast.success('Collaborator removed.');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to remove collaborator.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || 'Failed to remove collaborator.');
     } finally {
       setProcessingId(null);
     }
@@ -114,7 +118,7 @@ export function ManageAccessModal({
                 >
                   {/* User Info (Avatar + Email) */}
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-200/50">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-indigo-100 to-blue-100 text-sm font-bold text-blue-700 shadow-sm ring-1 ring-blue-200/50">
                       {getInitial(c.email)}
                     </div>
                     <div className="truncate pr-4">
@@ -126,7 +130,7 @@ export function ManageAccessModal({
                   </div>
 
                   {/* Actions Area */}
-                  <div className="flex flex-shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     {isProcessing ? (
                       <div className="flex w-24 items-center justify-center">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
@@ -141,7 +145,7 @@ export function ManageAccessModal({
                         <div className="relative">
                           <select 
                             value={c.role} 
-                            onChange={(e) => handleUpdateRole(c.user_id, e.target.value)} 
+                            onChange={(e) => handleUpdateRole(c.user_id, e.target.value as UserRole)} 
                             disabled={userRole !== 'owner'} 
                             className={`block w-28 appearance-none rounded-lg border py-1.5 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
                               userRole !== 'owner' 

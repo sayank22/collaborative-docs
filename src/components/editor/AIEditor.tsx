@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { useCompletion } from '@ai-sdk/react';
 import { toast } from 'sonner';
@@ -20,17 +19,16 @@ import {
   AlignRight, 
   Palette
 } from 'lucide-react';
+import type { Editor } from '@tiptap/core';
 
 interface AIEditorProps {
-  editor: any;
+  editor: Editor;
   userRole: string;
 }
 
 export function AIEditor({ editor, userRole }: AIEditorProps) {
-  const [, setTick] = useState(0);
-
   // Vercel AI SDK Hook
-  const { complete, isLoading } = useCompletion({
+  const { isLoading } = useCompletion({
     api: '/api/ai',
     // Note: We removed onFinish and onError from here to handle them directly 
     // inside the handleAI function where we have access to the exact selection range.
@@ -77,8 +75,9 @@ console.log(completionText);
       } else {
         toast.error("AI didn't return any text.");
       }
-    } catch (err: any) {
-      toast.error('AI Request failed: ' + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error('AI Request failed: ' + message);
     } finally {
       toast.dismiss('ai-toast');
     }

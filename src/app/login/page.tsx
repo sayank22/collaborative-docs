@@ -48,8 +48,9 @@ export default function LoginPage() {
 
       router.push('/');
       router.refresh();
-    } catch (error: any) {
-      setAuthError(error.message || 'Login failed. Please check your credentials and try again.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Login failed. Please check your credentials and try again.';
+      setAuthError(message);
     }
   };
 
@@ -67,14 +68,15 @@ export default function LoginPage() {
       });
 
       if (error) throw error;
-    } catch (error: any) {
-      setAuthError(error.message || 'Failed to log in with Google.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to log in with Google.';
+      setAuthError(message);
       setIsGoogleLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 p-4 sm:p-8">
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200/50">
         <div className="px-6 py-10 sm:px-10">
           
@@ -181,7 +183,7 @@ export default function LoginPage() {
 
               {authError && (
                 <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                   <p className="text-sm font-medium text-red-800">{authError}</p>
                 </div>
               )}
@@ -189,7 +191,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? (
                   <>
@@ -207,7 +209,7 @@ export default function LoginPage() {
         {/* Footer Area */}
         <div className="border-t border-slate-100 bg-slate-50 px-6 py-6 text-center sm:px-10">
           <p className="text-sm text-slate-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="font-semibold text-blue-600 transition-colors hover:text-blue-500">
               Create an account
             </Link>

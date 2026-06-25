@@ -5,14 +5,18 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { createClient } from '@/src/lib/supabase/client';
 import { toast } from 'sonner';
 import { useVersionStore } from '@/src/lib/sync/versionStore';
+import type { UserRole } from '@/src/lib/supabase/types';
+import type { VersionSnapshot } from '@/src/lib/sync/versionStore';
 
-type Role = 'owner' | 'editor' | 'viewer';
+type Role = UserRole;
 export type Collaborator = { user_id: string; email: string; role: Role; created_at: string; };
+type MinimalEditor = { setEditable: (editable: boolean) => void };
+type YjsUpdateOrigin = string | { constructor?: { name?: string } } | null | undefined;
 
 const uint8ArrayToHex = (arr: Uint8Array) => '\\x' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 const hexToUint8Array = (hex: string) => new Uint8Array(hex.replace('\\x', '').match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
 
-export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
+export function useDocumentSync(documentId: string, editor: MinimalEditor | null, ydoc: Y.Doc) {
   const router = useRouter();
   const [supabase] = useState(() => createClient()); 
   const { setVersions } = useVersionStore();
@@ -24,7 +28,7 @@ export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
 
   const fetchCollaborators = async () => {
     const { data, error } = await supabase.rpc('get_document_collaborators', { doc_id: documentId });
-    if (!error && data) setCollaborators(data as Collaborator[]);
+    if (!error && data) setCollaborators(data);
   };
 
   useEffect(() => {
@@ -78,7 +82,7 @@ export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
             }
 
             const { data: versionsData } = await supabase.from('document_versions').select('*').eq('document_id', documentId).order('created_at', { ascending: false });
-            if (versionsData) setVersions(versionsData as any);
+            if (versionsData) setVersions(versionsData as VersionSnapshot[]);
             await fetchCollaborators();
 
             // CONNECT WEBSOCKETS
@@ -116,7 +120,7 @@ export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
     initialize();
 
     // BROADCAST & AUTOSAVE ENGINE
-    const handleYjsUpdate = (update: Uint8Array, origin: any) => {
+    const handleYjsUpdate = (update: Uint8Array, origin: YjsUpdateOrigin) => {
       if (!isComponentMounted) return;
 
       const isLocalHumanUpdate = origin !== 'supabase' && origin !== 'initial-load' && origin !== 'reconnect' && origin?.constructor?.name !== 'IndexeddbPersistence';
@@ -124,7 +128,7 @@ export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
       if (isLocalHumanUpdate && (activeRole === 'owner' || activeRole === 'editor') && channel && isChannelReady) {
         try {
             channel.send({ type: 'broadcast', event: 'yjs-update', payload: { update: Array.from(update) } });
-        } catch (e) {
+        } catch {
             console.error("Broadcast failed, payload likely too large");
         }
       }
@@ -167,7 +171,7 @@ export function useDocumentSync(documentId: string, editor: any, ydoc: Y.Doc) {
          const stateVector = Y.encodeStateAsUpdate(ydoc);
          await supabase.from('documents').update({ content: uint8ArrayToHex(stateVector), updated_at: new Date().toISOString() }).eq('id', documentId);
          setSyncState('online');
-      } catch(e) {
+      } catch {
          setSyncState('offline-saved');
       }
     };

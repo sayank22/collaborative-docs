@@ -65,7 +65,7 @@ export function EditorHeader({
             onBlur={handleTitleBlur}
             readOnly={userRole === 'viewer'}
             placeholder="Untitled Document"
-            className={`w-full max-w-[160px] truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 transition-all sm:max-w-[300px] md:max-w-[400px] ${
+            className={`w-full max-w-40 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 transition-all sm:max-w-75 md:max-w-100 ${
               userRole === 'viewer' 
                 ? 'cursor-default focus:outline-none' 
                 : 'cursor-text hover:border-slate-300 hover:bg-slate-50 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10'
@@ -73,7 +73,7 @@ export function EditorHeader({
           />
 
           {userRole === 'viewer' && (
-            <span className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-600/20">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-600/20">
               <Eye className="h-3 w-3" />
               <span className="hidden sm:inline">View Only</span>
             </span>

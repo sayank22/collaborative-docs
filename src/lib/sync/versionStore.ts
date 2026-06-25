@@ -5,7 +5,7 @@ export interface VersionSnapshot {
   version_name: string;
   created_at: string;
   snapshot_data: string;
-  snapshot_json: any; 
+  snapshot_json: unknown;
 }
 
 interface VersionState {

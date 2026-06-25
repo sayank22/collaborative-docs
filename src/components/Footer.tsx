@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import { Globe } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 
 export function Footer() {

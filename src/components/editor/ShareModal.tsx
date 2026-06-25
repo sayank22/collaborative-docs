@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { X, Users, Mail, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Database } from '@/src/lib/supabase/types';
 
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   documentId: string;
-  supabase: any;
+  supabase: SupabaseClient<Database>;
   onSuccess: () => void;
 }
 
@@ -39,8 +41,9 @@ export function ShareModal({ isOpen, onClose, documentId, supabase, onSuccess }:
       setInviteRole('viewer'); // Reset to default
       onSuccess();
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to invite user.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to invite user.';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

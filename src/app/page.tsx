@@ -13,6 +13,15 @@ type DocumentRecord = {
   role: 'owner' | 'editor' | 'viewer';
 };
 
+type CollaboratorWithDocument = {
+  role: 'owner' | 'editor' | 'viewer';
+  documents: {
+    id: string;
+    title: string | null;
+    updated_at: string;
+  };
+};
+
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -48,7 +57,7 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        const formattedDocs: DocumentRecord[] = data.map((item: any) => ({
+        const formattedDocs: DocumentRecord[] = (data as CollaboratorWithDocument[]).map((item) => ({
           id: item.documents.id,
           title: item.documents.title || 'Untitled Document',
           updated_at: item.documents.updated_at,
@@ -88,10 +97,10 @@ export default function DashboardPage() {
 
       const { error: collabError } = await supabase
         .from('collaborators')
-        .insert({ 
-          document_id: newDocId, 
-          user_id: session.user.id, 
-          role: 'owner' 
+        .insert({
+          document_id: newDocId,
+          user_id: session.user.id,
+          role: 'owner',
         });
 
       if (collabError) throw collabError;
@@ -129,8 +138,6 @@ export default function DashboardPage() {
       toast.error('Failed to delete document.');
     }
   };
-
-
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -188,7 +195,7 @@ export default function DashboardPage() {
             {/* Actions area */}
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex sm:items-center sm:gap-3 border-r border-slate-200 pr-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-xs font-semibold text-white shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-indigo-600 text-xs font-semibold text-white shadow-sm">
                   {userInitial}
                 </div>
                 <span className="text-sm font-medium text-slate-600">{userEmail}</span>
@@ -286,7 +293,7 @@ export default function DashboardPage() {
               <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
                 <Users className="h-6 w-6 text-slate-400" /> Shared With Me
               </h2>
-              <p className="mt-1 text-sm text-slate-500">Documents you've been invited to collaborate on.</p>
+              <p className="mt-1 text-sm text-slate-500">Documents you&apos;ve been invited to collaborate on.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
