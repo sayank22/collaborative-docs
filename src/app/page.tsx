@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/src/lib/supabase/client';
-import { FileText, Plus, Loader2, LogOut, Clock, Users, Edit3, Eye, Shield, Trash2 } from 'lucide-react';
+import { FileText, Plus, Loader2, LogOut, Clock, Users, Edit3, Eye, Shield, Trash2, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 type DocumentRecord = {
@@ -26,61 +26,126 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(() => typeof window !== 'undefined' && !window.navigator.onLine);
   
   const [ownedDocs, setOwnedDocs] = useState<DocumentRecord[]>([]);
   const [sharedDocs, setSharedDocs] = useState<DocumentRecord[]>([]);
   
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
+    const handleNetworkChange = () => {
+      setIsOffline(!window.navigator.onLine);
+    };
+
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
+
     const fetchUserAndDocuments = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        return router.push('/login');
-      } 
-      
-      setUserEmail(session.user.email ?? null);
-
-      const { data, error } = await supabase
-        .from('collaborators')
-        .select(`
-          role,
-          documents (
-            id,
-            title,
-            updated_at
-          )
-        `)
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        const formattedDocs: DocumentRecord[] = (data as CollaboratorWithDocument[]).map((item) => ({
-          id: item.documents.id,
-          title: item.documents.title || 'Untitled Document',
-          updated_at: item.documents.updated_at,
-          role: item.role,
-        }));
-
-        setOwnedDocs(formattedDocs.filter(doc => doc.role === 'owner'));
-        setSharedDocs(formattedDocs.filter(doc => doc.role !== 'owner'));
+      // 1. OPTIMISTIC CACHE LOAD: Instantly show UI using local storage
+      try {
+        const cachedData = localStorage.getItem('collab_docs_dashboard_cache');
+        if (cachedData) {
+          const { owned, shared, email } = JSON.parse(cachedData);
+          setOwnedDocs(owned);
+          setSharedDocs(shared);
+          if (email) setUserEmail(email);
+        }
+      } catch (e) {
+        console.error("Failed to parse dashboard cache", e);
       }
 
-      setIsLoading(false);
+      // 2. OFFLINE ESCAPE: If explicitly offline, stop loading and trust the cache
+      if (typeof window !== 'undefined' && !window.navigator.onLine) {
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. NETWORK FETCH: If online, get fresh data from Supabase
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          return router.push('/login');
+        } 
+        
+        setUserEmail(session.user.email ?? null);
+
+        const { data, error } = await supabase
+          .from('collaborators')
+          .select(`
+            role,
+            documents (
+              id,
+              title,
+              updated_at
+            )
+          `)
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          const formattedDocs: DocumentRecord[] = (data as CollaboratorWithDocument[]).map((item) => ({
+            id: item.documents.id,
+            title: item.documents.title || 'Untitled Document',
+            updated_at: item.documents.updated_at,
+            role: item.role,
+          }));
+
+          const owned = formattedDocs.filter(doc => doc.role === 'owner');
+          const shared = formattedDocs.filter(doc => doc.role !== 'owner');
+
+          setOwnedDocs(owned);
+          setSharedDocs(shared);
+
+          // 4. UPDATE CACHE: Lock fresh data into local storage
+          localStorage.setItem('collab_docs_dashboard_cache', JSON.stringify({
+            owned,
+            shared,
+            email: session.user.email
+          }));
+        }
+      } catch (error) {
+        console.error("Dashboard fetch failed, utilizing cache fallback", error);
+        setIsOffline(true);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchUserAndDocuments();
+
+    // NETWORK STATUS LISTENERS
+    const handleOnline = () => { setIsOffline(false); fetchUserAndDocuments(); };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [router, supabase]);
 
   const handleSignOut = async () => {
+    if (isOffline) {
+      toast.error('Cannot sign out while offline.');
+      return;
+    }
     await supabase.auth.signOut();
+    localStorage.removeItem('collab_docs_dashboard_cache'); // Clear cache on logout
     router.push('/login');
   };
 
   const createNewDocument = async () => {
     if (isCreating) return;
+    if (isOffline) {
+      toast.error('Cannot create new documents while offline.');
+      return;
+    }
+    
     setIsCreating(true);
     
     try {
@@ -114,16 +179,15 @@ export default function DashboardPage() {
   };
 
   const deleteDoc = async (docId: string) => {
+    if (isOffline) {
+      toast.error('Cannot delete documents while offline.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this document? All versions will be deleted as well. This action cannot be undone.')) return;
 
     try {
-      const { error: collabError } = await supabase
-        .from('collaborators')
-        .delete()
-        .eq('document_id', docId);
-
-      if (collabError) throw collabError;
-
+      // With CASCADE DELETE set up in SQL, deleting the document removes versions and collaborators automatically
       const { error: docError } = await supabase
         .from('documents')
         .delete()
@@ -133,6 +197,18 @@ export default function DashboardPage() {
 
       setOwnedDocs(prev => prev.filter(doc => doc.id !== docId));
       setSharedDocs(prev => prev.filter(doc => doc.id !== docId));
+      
+      // Update cache immediately after delete
+      const cachedData = localStorage.getItem('collab_docs_dashboard_cache');
+      if (cachedData) {
+        const { owned, shared, email } = JSON.parse(cachedData);
+        localStorage.setItem('collab_docs_dashboard_cache', JSON.stringify({
+          owned: owned.filter((d: DocumentRecord) => d.id !== docId),
+          shared: shared.filter((d: DocumentRecord) => d.id !== docId),
+          email
+        }));
+      }
+
       toast.success('Document deleted successfully.');
     } catch (error) {
       console.error('Error deleting document:', error);
@@ -150,7 +226,7 @@ export default function DashboardPage() {
   // ---------------------------------------------------------------------------
   // SKELETON LOADER
   // ---------------------------------------------------------------------------
-  if (isLoading) {
+  if (isLoading && ownedDocs.length === 0 && sharedDocs.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50">
         <nav className="h-16 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -216,6 +292,16 @@ export default function DashboardPage() {
       {/* Main Dashboard Content */}
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-14">
         
+        {/* Offline Banner Indicator */}
+        {isOffline && (
+          <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-800 shadow-sm animate-in fade-in duration-300">
+            <WifiOff className="h-5 w-5 shrink-0" />
+            <p className="text-sm font-medium">
+              You are offline. Showing cached documents. You can still open and edit recently viewed files.
+            </p>
+          </div>
+        )}
+
         {/* SECTION 1: My Documents */}
         <section>
           <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -230,18 +316,18 @@ export default function DashboardPage() {
             {/* Create Blank Card */}
             <button 
               onClick={createNewDocument}
-              disabled={isCreating}
-              className="group relative flex h-52 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-transparent transition-all hover:border-blue-500 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              disabled={isCreating || isOffline}
+              className="group relative flex h-52 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-transparent transition-all hover:border-blue-500 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-slate-300 disabled:hover:bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm transition-transform group-hover:scale-110 group-hover:shadow group-active:scale-95">
                 {isCreating ? (
                   <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                 ) : (
-                  <Plus className="h-6 w-6 text-blue-600" />
+                  <Plus className={`h-6 w-6 ${isOffline ? 'text-slate-400' : 'text-blue-600'}`} />
                 )}
               </div>
-              <span className="text-sm font-semibold text-slate-700">
-                {isCreating ? 'Creating...' : 'Create Blank'}
+              <span className={`text-sm font-semibold ${isOffline ? 'text-slate-400' : 'text-slate-700'}`}>
+                {isCreating ? 'Creating...' : isOffline ? 'Offline' : 'Create Blank'}
               </span>
             </button>
             
@@ -278,7 +364,9 @@ export default function DashboardPage() {
                     e.stopPropagation();
                     deleteDoc(doc.id);
                   }}
-                  className="absolute right-4 bottom-4 rounded-md bg-red-100 p-1 text-red-600 hover:bg-red-200"
+                  disabled={isOffline}
+                  className="absolute right-4 bottom-4 rounded-md bg-red-100 p-1 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isOffline ? "Cannot delete offline" : "Delete Document"}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
