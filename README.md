@@ -112,9 +112,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 See it live: [https://collaborative-docs-sayankundu.vercel.app](https://collaborative-docs-sayankundu.vercel.app)
 
-![Desktop Demo 1](client/src/assets/1.png)
+![Desktop Demo 1](src/app/Screenshot.png)
 
-![Desktop Demo 2](client/src/assets/2.png)
+![Desktop Demo 2](src/app/Screenshot1.png)
 
 ---
 
