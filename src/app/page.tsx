@@ -114,7 +114,7 @@ export default function DashboardPage() {
   };
 
   const deleteDoc = async (docId: string) => {
-    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this document? All versions will be deleted as well. This action cannot be undone.')) return;
 
     try {
       const { error: collabError } = await supabase
@@ -182,7 +182,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       
       {/* Top Navigation */}
-      <nav className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-10 border-b border-slate-200 bg-slate-100 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo area */}
@@ -195,7 +195,7 @@ export default function DashboardPage() {
             
             {/* Actions area */}
             <div className="flex items-center gap-4">
-              <div className="hidden sm:flex sm:items-center sm:gap-3 border-r border-slate-200 pr-4">
+              <div className="hidden sm:flex sm:items-center sm:gap-3 border-r border-slate-600 pr-4">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-indigo-600 text-xs font-semibold text-white shadow-sm">
                   {userInitial}
                 </div>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
               </div>
               <button 
                 onClick={handleSignOut}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-slate-200 text-slate-700 transition-colors hover:bg-slate-300 hover:text-red-600"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sign Out</span>

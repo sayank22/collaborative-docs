@@ -2,11 +2,11 @@ import { FaGithub, FaLinkedin } from 'react-icons/fa';
 
 export function Footer() {
   return (
-    <footer className="mt-auto w-full border-t border-slate-200 bg-white py-6">
+    <footer className="mt-auto w-full border-t border-slate-300 bg-slate-100 py-6">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
         
         {/* Name & Portfolio Link */}
-        <p className="text-sm font-medium text-slate-500">
+        <p className="text-sm font-medium text-slate-600">
           Built by{' '}
           <a 
             href="https://sayan-kundu-portfolio.netlify.app" 
@@ -21,10 +21,10 @@ export function Footer() {
         {/* Social Links */}
         <div className="flex items-center gap-4">
           <a 
-            href="https://github.com/sayank22" 
+            href="https://github.com/sayank22/collaborative-docs" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-slate-400 transition-colors hover:text-slate-900"
+            className="text-slate-600 transition-colors hover:text-slate-900"
             title="GitHub Profile"
           >
             <FaGithub className="h-5 w-5" />
@@ -35,7 +35,7 @@ export function Footer() {
             href="https://www.linkedin.com/in/sayan-kundu-70b5442b6" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-slate-400 transition-colors hover:text-blue-700"
+            className="text-slate-600 transition-colors hover:text-blue-700"
             title="LinkedIn Profile"
           >
             <FaLinkedin className="h-5 w-5" />

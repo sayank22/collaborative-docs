@@ -46,14 +46,14 @@ export function EditorHeader({
       <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
         <button 
           onClick={() => router.push('/')} 
-          className="group flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200" 
+          className="group flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 transition-colors hover:bg-slate-300 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-slate-200" 
           title="Back to Dashboard"
         >
           <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
         </button>
         
         {/* Document Icon (Visual Anchor) */}
-        <div className="hidden h-9 w-9 items-center justify-center rounded-lg bg-blue-50 sm:flex">
+        <div className="hidden h-9 w-9 items-center justify-center rounded-lg bg-sky-100 sm:flex">
           <FileText className="h-5 w-5 text-blue-600" />
         </div>
 
@@ -107,7 +107,7 @@ export function EditorHeader({
         </div>
 
         {/* Separator */}
-        <div className="hidden h-6 w-px bg-slate-200 sm:block" />
+        <div className="hidden h-6 w-px bg-slate-600 sm:block" />
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export function EditorHeader({
               <button 
                 onClick={onCreateSnapshot} 
                 title="Save Version Snapshot"
-                className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className="flex items-center gap-2 rounded-lg bg-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
               >
                 <Bookmark className="h-4 w-4" />
                 <span className="hidden lg:inline">Save Version</span>
@@ -137,7 +137,7 @@ export function EditorHeader({
                   <button 
                     onClick={onOpenManage} 
                     title="Manage Access"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-200 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   >
                     <Settings className="h-5 w-5" />
                   </button>
@@ -150,7 +150,7 @@ export function EditorHeader({
           <button 
             onClick={onToggleSidebar} 
             title="View History"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="flex items-center gap-2 rounded-lg bg-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <History className="h-4 w-4" />
             <span className="hidden lg:inline">History</span>
