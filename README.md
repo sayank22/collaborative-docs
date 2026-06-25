@@ -59,13 +59,14 @@ To protect the collaborative real-time engine from malicious actors attempting t
 │   ├── app/
 │   │   ├── api/ai/route.ts       # Serverless edge endpoint handling Gemini streaming
 │   │   ├── editor/[id]/page.tsx  # Optimized TipTap collaborative instance & toolbar UI
+│   │   ├── page.tsx              # Global page wrappers    
 │   │   └── layout.tsx            # Global layout wrappers
 │   ├── hooks/
 │   │   └── useDocumentSync.ts    # Core state synchronization and background local-first sync loop
 │   ├── lib/
 │   │   ├── supabase/client.ts    # Singleton configuration for database & auth clients
 │   │   └── sync/versionStore.ts  # Zustand/Global store managing time-travel version histories
-│   └── components/               # Share and Access Modals, Headings, and responsive sub-elements
+│   └── components/               # Share and Access Modals, Footer, and responsive sub-elements
 
 ```
 
