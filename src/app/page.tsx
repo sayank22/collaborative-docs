@@ -133,6 +133,7 @@ export default function DashboardPage() {
 
       setOwnedDocs(prev => prev.filter(doc => doc.id !== docId));
       setSharedDocs(prev => prev.filter(doc => doc.id !== docId));
+      toast.success('Document deleted successfully.');
     } catch (error) {
       console.error('Error deleting document:', error);
       toast.error('Failed to delete document.');

@@ -67,7 +67,7 @@ Axios for GitHub + AI API integration
 
 ## 🌐 Live Links
 
-**🔗 : https://testcase-generator-sayan-kundu.vercel.app**
+[https://collaborative-docs-sayankundu.vercel.app](https://collaborative-docs-sayankundu.vercel.app)
 
 ---
 
@@ -93,7 +93,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Demo
 
-See it live: [testcase-generator-sayan-kundu.vercel.app](testcase-generator-sayan-kundu.vercel.app)
+See it live: [https://collaborative-docs-sayankundu.vercel.app](https://collaborative-docs-sayankundu.vercel.app)
 
 ![Desktop Demo 1](client/src/assets/1.png)
 

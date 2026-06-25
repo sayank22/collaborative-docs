@@ -1,7 +1,7 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
-import { useCompletion } from '@ai-sdk/react';
 import { toast } from 'sonner';
 import { 
   Loader2, 
@@ -27,16 +27,28 @@ interface AIEditorProps {
 }
 
 export function AIEditor({ editor, userRole }: AIEditorProps) {
-  // Vercel AI SDK Hook
-  const { isLoading } = useCompletion({
-    api: '/api/ai',
-    // Note: We removed onFinish and onError from here to handle them directly 
-    // inside the handleAI function where we have access to the exact selection range.
-  });
+  // 1. Keeps the toolbar UI in sync with the cursor (e.g., highlighting the Bold button)
+  const [, setTick] = useState(0);
+  
+  // 2. Tracks our manual fetch request
+  const [isAILoading, setIsAILoading] = useState(false);
+
+  useEffect(() => {
+    if (!editor) return;
+    const forceUpdate = () => setTick((tick) => tick + 1);
+
+    editor.on('transaction', forceUpdate);
+    editor.on('selectionUpdate', forceUpdate);
+
+    return () => {
+      editor.off('transaction', forceUpdate);
+      editor.off('selectionUpdate', forceUpdate);
+    };
+  }, [editor]);
 
   // The AI Trigger Function
   const handleAI = async (command: 'improve' | 'fix' | 'shorter') => {
-    // 1. Capture the exact selection coordinates
+    // Capture the exact selection coordinates
     const { from, to } = editor.state.selection;
     const text = editor.state.doc.textBetween(from, to, ' ');
     
@@ -45,33 +57,44 @@ export function AIEditor({ editor, userRole }: AIEditorProps) {
       return;
     }
 
+    setIsAILoading(true);
     toast.loading('AI is thinking...', { id: 'ai-toast' });
     
     try {
       const result = await fetch("/api/ai", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    prompt: text,
-    command,
-  }),
-});
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: text,
+          command,
+        }),
+      });
 
-const completionText = await result.text();
+      if (!result.ok) {
+        throw new Error(`Server responded with status ${result.status}`);
+      }
 
-console.log(completionText);
+      const completionText = await result.text();
+
+      console.log("Browser received:", completionText);
+      console.log("Selection:", { from, to });
       
       if (completionText) {
-        // 3. Explicitly replace the captured range with the new AI text
-        editor
+        // Clean up any rogue quotes from the AI response
+        const cleanText = completionText.replace(/^"|"$/g, '').trim();
+
+        // Explicitly replace the captured range with the new AI text
+        const success = editor
           .chain()
           .focus()
-          .insertContentAt({ from, to }, completionText)
+          .insertContentAt({ from, to }, cleanText)
           .run();
+
+        console.log("Insert success:", success);
           
-        toast.success('AI Magic applied!');
+        toast.success('AI Help applied!');
       } else {
         toast.error("AI didn't return any text.");
       }
@@ -79,33 +102,59 @@ console.log(completionText);
       const message = err instanceof Error ? err.message : String(err);
       toast.error('AI Request failed: ' + message);
     } finally {
+      setIsAILoading(false);
       toast.dismiss('ai-toast');
     }
   };
+
+  const handleAIAction = (command: 'improve' | 'fix' | 'shorter') => {
+    handleAI(command);
+    setIsAIOpen(false); // Close the menu immediately after selection
+  };
+
+  // Track if the AI dropdown is open
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  
+  // Reference to detect clicks outside the dropdown
+  const aiDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (aiDropdownRef.current && !aiDropdownRef.current.contains(event.target as Node)) {
+        setIsAIOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <>
       {/* Editor Toolbar */}
       {editor && userRole !== 'viewer' && (
         <div className="sticky top-16 z-40 flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
-          
-          {/* AI MAGIC BUTTONS */}
+
+            {/* AI Help BUTTON */}
           <div className="flex items-center gap-1 border-r border-slate-200 pr-2 mr-2">
-            <div className="relative group">
+            <div className="relative" ref={aiDropdownRef}>
               <button 
-                disabled={isLoading}
+                onClick={() => setIsAIOpen(!isAIOpen)}
+                disabled={isAILoading}
                 className="flex items-center gap-1.5 rounded-md bg-purple-50 px-3 py-1.5 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50 border border-purple-200 shadow-sm"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 AI Help
               </button>
               
-              {/* Dropdown Menu */}
-              <div className="absolute left-0 top-full mt-1 hidden w-40 flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl group-hover:flex z-50">
-                <button onClick={() => handleAI('improve')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">Make Professional</button>
-                <button onClick={() => handleAI('fix')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">Fix Grammar</button>
-                <button onClick={() => handleAI('shorter')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">Make Shorter</button>
-              </div>
+              {/* Dropdown Menu - Now controlled by React State instead of CSS hover */}
+              {isAIOpen && (
+                <div className="absolute left-0 top-full mt-1 w-40 flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <button onClick={() => handleAIAction('improve')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Make Professional</button>
+                  <button onClick={() => handleAIAction('fix')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Fix Grammar</button>
+                  <button onClick={() => handleAIAction('shorter')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Make Shorter</button>
+                </div>
+              )}
             </div>
           </div>
           
