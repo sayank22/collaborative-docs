@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { 
   Loader2, 
   Sparkles, 
@@ -32,6 +33,9 @@ export function AIEditor({ editor, userRole }: AIEditorProps) {
   
   // 2. Tracks our manual fetch request
   const [isAILoading, setIsAILoading] = useState(false);
+
+  // 3. Tracks Popover open/close state
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   useEffect(() => {
     if (!editor) return;
@@ -109,25 +113,8 @@ export function AIEditor({ editor, userRole }: AIEditorProps) {
 
   const handleAIAction = (command: 'improve' | 'fix' | 'shorter') => {
     handleAI(command);
-    setIsAIOpen(false); // Close the menu immediately after selection
+    setIsAIOpen(false); // Close the shadcn popover immediately after selection
   };
-
-  // Track if the AI dropdown is open
-  const [isAIOpen, setIsAIOpen] = useState(false);
-  
-  // Reference to detect clicks outside the dropdown
-  const aiDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (aiDropdownRef.current && !aiDropdownRef.current.contains(event.target as Node)) {
-        setIsAIOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   return (
     <>
@@ -135,27 +122,33 @@ export function AIEditor({ editor, userRole }: AIEditorProps) {
       {editor && userRole !== 'viewer' && (
         <div className="sticky top-16 z-40 flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
 
-            {/* AI Help BUTTON */}
+          {/* UPGRADED: AI Help BUTTON WITH SHADCN POPOVER */}
           <div className="flex items-center gap-1 border-r border-slate-200 pr-2 mr-2">
-            <div className="relative" ref={aiDropdownRef}>
-              <button 
-                onClick={() => setIsAIOpen(!isAIOpen)}
-                disabled={isAILoading}
-                className="flex items-center gap-1.5 rounded-md bg-purple-50 px-3 py-1.5 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50 border border-purple-200 shadow-sm"
-              >
-                {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                AI Help
-              </button>
+            <Popover open={isAIOpen} onOpenChange={setIsAIOpen}>
+              <PopoverTrigger asChild>
+                <button 
+                  disabled={isAILoading}
+                  className="flex items-center gap-1.5 rounded-md bg-purple-50 px-3 py-1.5 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50 border border-purple-200 shadow-sm data-[state=open]:bg-purple-100"
+                >
+                  {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  AI Help
+                </button>
+              </PopoverTrigger>
               
-              {/* Dropdown Menu - Now controlled by React State instead of CSS hover */}
-              {isAIOpen && (
-                <div className="absolute left-0 top-full mt-1 w-40 flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
-                  <button onClick={() => handleAIAction('improve')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Make Professional</button>
-                  <button onClick={() => handleAIAction('fix')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Fix Grammar</button>
-                  <button onClick={() => handleAIAction('shorter')} className="px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 transition-colors">Make Shorter</button>
+              <PopoverContent className="w-48 rounded-xl bg-white p-1.5 shadow-lg border border-slate-100" align="start">
+                <div className="flex flex-col space-y-0.5">
+                  <button onClick={() => handleAIAction('improve')} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-purple-700 transition-colors">
+                    Make Professional
+                  </button>
+                  <button onClick={() => handleAIAction('fix')} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-purple-700 transition-colors">
+                    Fix Grammar
+                  </button>
+                  <button onClick={() => handleAIAction('shorter')} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-purple-700 transition-colors">
+                    Make Shorter
+                  </button>
                 </div>
-              )}
-            </div>
+              </PopoverContent>
+            </Popover>
           </div>
           
           {/* Basic Formatting */}

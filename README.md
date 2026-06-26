@@ -38,6 +38,8 @@ To protect the collaborative real-time engine from malicious actors attempting t
 * **Framework Integration:** Powered by the modern `@ai-sdk/react` framework and Google's `gemini-pro` text model via Google AI Studio. 
 * **Selection-Aware Prompts:** Highlighting any block of text exposes utility commands directly in the toolbar. The editor captures the specific cursor selection coordinates, transmits the text to a serverless Next.js API route, and streams the incoming tokens natively into the editor instance to handle tasks like **Fix Grammar**, **Shorten**, or **Rewrite Professionally**.
 
+---
+
 ### 6. Real-World Considerations & Production Mitigation
 To ensure production readiness, the architecture addresses several inherent distributed system challenges:
 
@@ -47,7 +49,7 @@ To ensure production readiness, the architecture addresses several inherent dist
 
 ---
 
-### 🔮 7. Future Engineering Roadmap
+### 7. Future Engineering Roadmap
 While the application completely fulfills all assignment and distributed system benchmarks, a production-scale roll-out would prioritize the following technical layers:
 
 * **Transactional SMTP Invitations (Nodemailer/Resend):** Currently, collaborator invitations are securely handled via internal database joins and instantly update user-facing dashboards. The next phase will bridge an external transaction handler (like an SMTP gateway or Resend SDK) to dispatch raw email verification hooks containing signed cryptographic hashes for secure token-based workspace onboarding.
@@ -64,7 +66,7 @@ While the application completely fulfills all assignment and distributed system 
 - **Rich Text Rich Environment:** TipTap Editor Core (StarterKit, Underline, TextStyle, Color, TextAlign)
 - **Database & Realtime Service:** Supabase (PostgreSQL with hard-locked RLS)
 - **AI Infrastructure:** Vercel AI SDK & Google Generative AI (`gemini-pro`)
-- **Styling UI/UX:** Tailwind CSS & Lucide React
+- **Styling UI/UX:** Tailwind CSS & Shadcn, Lucide React
 
 ---
 

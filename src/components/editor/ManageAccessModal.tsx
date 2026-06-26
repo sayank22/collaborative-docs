@@ -7,6 +7,18 @@ import { toast } from 'sonner';
 import { Collaborator } from '@/src/hooks/useDocumentSync';
 import type { Database, UserRole } from '@/src/lib/supabase/types';
 
+// --- NEW: SHADCN IMPORTS ---
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 interface ManageAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,6 +40,10 @@ export function ManageAccessModal({
 }: ManageAccessModalProps) {
   // Track which specific user row is currently processing a mutation
   const [processingId, setProcessingId] = useState<string | null>(null);
+  
+  // --- NEW: SHADCN MODAL STATE ---
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToRemove, setUserToRemove] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -51,14 +67,21 @@ export function ManageAccessModal({
     }
   };
 
-  const handleRemoveUser = async (targetUserId: string) => {
-    if (!confirm('Are you sure you want to remove this collaborator? They will lose all access to this document.')) return;
+  // 1. The Trigger: Prepares state and opens the accessible modal overlay
+  const promptRemoveUser = (targetUserId: string) => {
+    setUserToRemove(targetUserId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // 2. The Finalizer: Fires off natively once the user confirms in the shadcn dialog box
+  const executeRemoveUser = async () => {
+    if (!userToRemove) return;
     
-    setProcessingId(targetUserId);
+    setProcessingId(userToRemove);
     try {
       const { error } = await supabase.rpc('remove_collaborator', { 
         doc_id: documentId, 
-        target_user_id: targetUserId 
+        target_user_id: userToRemove 
       });
       if (error) throw new Error(error.message);
       
@@ -69,6 +92,7 @@ export function ManageAccessModal({
       toast.error(message || 'Failed to remove collaborator.');
     } finally {
       setProcessingId(null);
+      setUserToRemove(null);
     }
   };
 
@@ -163,10 +187,10 @@ export function ManageAccessModal({
                           </div>
                         </div>
 
-                        {/* Remove Button */}
+                        {/* UPGRADED: Trigger Shadcn Remove Button */}
                         {userRole === 'owner' && (
                           <button 
-                            onClick={() => handleRemoveUser(c.user_id)} 
+                            onClick={() => promptRemoveUser(c.user_id)} 
                             title="Remove collaborator"
                             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20"
                           >
@@ -192,6 +216,31 @@ export function ManageAccessModal({
           </div>
         </div>
       </div>
+
+      {/* --- NEW: SHADCN ACCESSIBLE DIALOG BACKDROP COMPONENT --- */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-xl border border-slate-200 bg-white shadow-xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-slate-900">
+              Remove Collaborator?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 mt-2">
+              Are you sure you want to remove this collaborator? They will instantly lose all access to view or edit this document.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2 justify-end">
+            <AlertDialogCancel className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeRemoveUser}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-sm shadow-red-600/10"
+            >
+              Remove User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

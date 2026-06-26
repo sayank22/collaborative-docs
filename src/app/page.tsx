@@ -6,6 +6,17 @@ import { createClient } from '@/src/lib/supabase/client';
 import { FileText, Plus, Loader2, LogOut, Clock, Users, Edit3, Eye, Shield, Trash2, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 type DocumentRecord = {
   id: string;
   title: string;
@@ -31,6 +42,9 @@ export default function DashboardPage() {
   const [ownedDocs, setOwnedDocs] = useState<DocumentRecord[]>([]);
   const [sharedDocs, setSharedDocs] = useState<DocumentRecord[]>([]);
   
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<string | null>(null);
+  
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -43,7 +57,7 @@ export default function DashboardPage() {
     window.addEventListener('offline', handleNetworkChange);
 
     const fetchUserAndDocuments = async () => {
-      // 1. OPTIMISTIC CACHE LOAD: Instantly show UI using local storage
+      // CACHE LOAD: Instantly show UI using local storage
       try {
         const cachedData = localStorage.getItem('collab_docs_dashboard_cache');
         if (cachedData) {
@@ -56,13 +70,12 @@ export default function DashboardPage() {
         console.error("Failed to parse dashboard cache", e);
       }
 
-      // 2. OFFLINE ESCAPE: If explicitly offline, stop loading and trust the cache
       if (typeof window !== 'undefined' && !window.navigator.onLine) {
         setIsLoading(false);
         return;
       }
 
-      // 3. NETWORK FETCH: If online, get fresh data from Supabase
+      // NETWORK FETCH: If online, get fresh data from Supabase
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -99,7 +112,7 @@ export default function DashboardPage() {
           setOwnedDocs(owned);
           setSharedDocs(shared);
 
-          // 4. UPDATE CACHE: Lock fresh data into local storage
+          // UPDATE CACHE: Lock fresh data into local storage
           localStorage.setItem('collab_docs_dashboard_cache', JSON.stringify({
             owned,
             shared,
@@ -178,33 +191,40 @@ export default function DashboardPage() {
     }
   };
 
-  const deleteDoc = async (docId: string) => {
+  // 1. The Trigger: Prepares state and opens the accessible modal overlay
+  const handleOpenDeleteDialog = (docId: string) => {
     if (isOffline) {
       toast.error('Cannot delete documents while offline.');
       return;
     }
+    setDocToDelete(docId);
+    setIsDeleteDialogOpen(true);
+  };
 
-    if (!confirm('Are you sure you want to delete this document? All versions will be deleted as well. This action cannot be undone.')) return;
+  // 2. The Finalizer: Fires off natively once the user confirms in the shadcn dialog box
+  const executeDelete = async () => {
+    if (!docToDelete || isOffline) return;
 
     try {
-      // With CASCADE DELETE set up in SQL, deleting the document removes versions and collaborators automatically
+      // With CASCADE DELETE configured in SQL, deleting from 'documents' handles the rest!
       const { error: docError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', docId);
+        .eq('id', docToDelete);
 
       if (docError) throw docError;
 
-      setOwnedDocs(prev => prev.filter(doc => doc.id !== docId));
-      setSharedDocs(prev => prev.filter(doc => doc.id !== docId));
+      // Update functional react states
+      setOwnedDocs(prev => prev.filter(doc => doc.id !== docToDelete));
+      setSharedDocs(prev => prev.filter(doc => doc.id !== docToDelete));
       
-      // Update cache immediately after delete
+      // Keep your synchronous local dashboard cache matching perfectly
       const cachedData = localStorage.getItem('collab_docs_dashboard_cache');
       if (cachedData) {
         const { owned, shared, email } = JSON.parse(cachedData);
         localStorage.setItem('collab_docs_dashboard_cache', JSON.stringify({
-          owned: owned.filter((d: DocumentRecord) => d.id !== docId),
-          shared: shared.filter((d: DocumentRecord) => d.id !== docId),
+          owned: owned.filter((d: DocumentRecord) => d.id !== docToDelete),
+          shared: shared.filter((d: DocumentRecord) => d.id !== docToDelete),
           email
         }));
       }
@@ -213,6 +233,9 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error deleting document:', error);
       toast.error('Failed to delete document.');
+    } finally {
+      // Clean up pointer variables to reset accessibility focus states
+      setDocToDelete(null);
     }
   };
 
@@ -251,9 +274,6 @@ export default function DashboardPage() {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // MAIN RENDER
-  // ---------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-50">
       
@@ -362,7 +382,7 @@ export default function DashboardPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteDoc(doc.id);
+                    handleOpenDeleteDialog(doc.id);
                   }}
                   disabled={isOffline}
                   className="absolute right-4 bottom-4 rounded-md bg-red-100 p-1 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -425,6 +445,31 @@ export default function DashboardPage() {
         )}
 
       </main>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-slate-900">
+              Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500 mt-2">
+              This action cannot be undone. This will permanently delete the document and wipe all version history snapshots from the production server.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-2 justify-end">
+            <AlertDialogCancel className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeDelete} // <-- Calls the database function we just created!
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-sm"
+            >
+              Delete Document
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
     </div>
   );
 }
