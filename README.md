@@ -126,6 +126,17 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ---
 
 
+### 🧪 How to Test the Offline-First Architecture
+Because this application relies on Next.js dynamic routing, the browser must cache the Application Shell (UI) once before true offline navigation can occur.
+
+1. **Online Initialization:** Open the application and navigate to the Dashboard while connected to the internet.
+2. **Cache the Editor:** Click on any document to open the Editor page. This caches the routing chunks and initializes the `y-indexeddb` engine.
+3. **Go Offline:** Turn off your WiFi or set your browser Network tab to "Offline".
+4. **Test the Local-First Engine:** Navigate back to the Dashboard and open any document. Notice that the pages route instantly, and your documents load their text state directly from local IndexedDB with zero network requests.
+
+---
+
+
 ## Demo
 
 See it live: [https://collaborative-docs-sayankundu.vercel.app](https://collaborative-docs-sayankundu.vercel.app)
