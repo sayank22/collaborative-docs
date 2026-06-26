@@ -21,7 +21,7 @@ export function Footer() {
         {/* Social Links */}
         <div className="flex items-center gap-4">
           <a 
-            href="https://github.com/sayank22/collaborative-docs" 
+            href="https://github.com/sayank22" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-slate-600 transition-colors hover:text-slate-900"
